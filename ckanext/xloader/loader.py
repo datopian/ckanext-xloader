@@ -20,6 +20,7 @@ except ImportError:
 
 if tk.check_ckan_version(min_version='2.7'):
     import ckanext.datastore.backend.postgres as datastore_db
+    import ckanext.nhs.backend.postgres as nhs_datastore_db
     get_write_engine = datastore_db.get_write_engine
 else:
     # older versions of ckan
@@ -33,9 +34,20 @@ else:
 
 create_indexes = datastore_db.create_indexes
 _drop_indexes = datastore_db._drop_indexes
+nhs_create_indexes = nhs_datastore_db.create_indexes
 
 MAX_COLUMN_LENGTH = 63
 
+
+def get_fulltext_enable():
+    ''' Get the value of enable_fulltext from the configuration file. Default value is True.'''
+    fulltext_enable = config.get('ckanext.xloader.enable_fulltext')
+    if fulltext_enable is None:
+        fulltext_enable = True
+    return fulltext_enable
+
+
+fulltext_enable = get_fulltext_enable()
 
 def load_csv(csv_filepath, resource_id, mimetype='text/csv', logger=None):
     '''Loads a CSV into DataStore. Does not create the indexes.'''
@@ -235,9 +247,10 @@ def load_csv(csv_filepath, resource_id, mimetype='text/csv', logger=None):
 
     logger.info('...copying done')
 
-    logger.info('Creating search index...')
-    _populate_fulltext(connection, resource_id, fields=fields)
-    logger.info('...search index created')
+    if fulltext_enable == True:
+        logger.info('Creating search index...')
+        _populate_fulltext(connection, resource_id, fields=fields)
+        logger.info('...search index created')
 
     return fields
 
@@ -253,8 +266,12 @@ def create_column_indexes(fields, resource_id, logger):
     engine = get_write_engine()
     connection = context['connection'] = engine.connect()
 
-    create_indexes(context, data_dict)
-    _enable_fulltext_trigger(connection, resource_id)
+    if fulltext_enable == True:
+        create_indexes(context, data_dict)
+        _enable_fulltext_trigger(connection, resource_id)
+    else:
+        logger.info('Creating column indexes without fulltext...')
+        nhs_create_indexes(context, data_dict)
 
     logger.info('...column indexes created.')
 
