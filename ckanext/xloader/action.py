@@ -71,7 +71,11 @@ def xloader_submit(context, data_dict):
         return False
 
     site_url = config['ckan.site_url']
-    callback_url = site_url + '/api/3/action/xloader_hook'
+    if config.get('ckanext.xloader.host'):
+        xloader_host = config.get('ckanext.xloader.host')
+    else:
+        xloader_host = site_url
+    callback_url = xloader_host + '/api/3/action/xloader_hook'
 
     site_user = p.toolkit.get_action('get_site_user')({'ignore_auth': True}, {})
 
