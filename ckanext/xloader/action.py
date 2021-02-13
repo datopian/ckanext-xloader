@@ -71,7 +71,12 @@ def xloader_submit(context, data_dict):
         return False
 
     site_url = config['ckan.site_url']
-    callback_url = site_url + '/api/3/action/xloader_hook'
+    if config.get('ckanext.xloader.host'):
+        xloader_host = config.get('ckanext.xloader.host')
+    else:
+        xloader_host = site_url
+    callback_url = xloader_host + '/api/3/action/xloader_hook'
+    log.info(callback_url)
 
     site_user = p.toolkit.get_action('get_site_user')({'ignore_auth': True}, {})
 
@@ -231,6 +236,9 @@ def xloader_hook(context, data_dict):
         :type finished_timestamp: timestamp
 
     '''
+
+    print 'XLOADER HOOK RECEIVED:'
+    print data_dict
 
     metadata, status = _get_or_bust(data_dict, ['metadata', 'status'])
 
